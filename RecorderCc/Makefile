@@ -3,10 +3,17 @@ CXF=-municode -mwindows -Wall -pedantic -std=gnu++2a \
 	-static -static-libgcc -static-libstdc++
 BIN=Recorder.exe
 
-.phony: clean
+.phony: default clean
 
-${BIN}: Recorder.cpp Recorder.hpp 
-	${CXX} ${CXF} -o $@ Recorder.cpp
+default: ${BIN}
+
+Recorder.pb.cc: Recorder.proto
+	protoc --experimental_allow_proto3_optional \
+		--proto_path=./ --cpp_out=./ \
+		$^
+
+${BIN}: Recorder.pb.cc Recorder.pb.h Recorder.cc Recorder.h 
+	${CXX} ${CXF} -o $@ Recorder.cc
 
 clean:
-	rm ${BIN}
+	rm *.pb.* ${BIN}

@@ -1,4 +1,4 @@
-#include "Recorder.hpp"
+#include "Recorder.h"
 using namespace std;
 
 HINSTANCE hInst;

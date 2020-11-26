@@ -6,6 +6,10 @@ project.lock.json
 *.pyc
 nupkg/
 
+# Protobuf files
+*.pb.h
+*.pb.cc
+
 # Visual Studio Code
 .vscode
 
