@@ -29,7 +29,7 @@ namespace Recorder
             ri = (RawInput *)Marshal.AllocHGlobal(8192);
             fs = new FileStream(
                 "inputrec.dat",
-                System.IO.FileMode.Create,
+                System.IO.FileMode.Append,
                 System.IO.FileAccess.Write
             );
 
@@ -89,27 +89,54 @@ namespace Recorder
                 (IntPtr)ri, ref sz,
                 Marshal.SizeOf(typeof(RawInputHeader))
             );
-            // TODO: Record overflow in the log.
+            if (rc < 0)
+                new WarningRecord {
+                    Text = "GetRawInput fails with rc < 0."
+                }.WriteTo(fs);
 
             Console.WriteLine(rc + " " + ri->Header.Type);
             if (ri->Header.Type != RawInputType.HID)
                 return;
 
-            // This means two copies. Seriously?
-            var data = new byte[ri->Hid.Size * ri->Hid.Count];
-            Marshal.Copy(
-                    (IntPtr)ri->Hid.Data, data,
-                    0, data.Length
-            );
-                    
+            // TODO: Use protobuf optional fields to potentially
+            // save space. Many report values are zero at any given
+            // time.
             FILETIME time;
             GetSystemTimePreciseAsFileTime(out time);
-            new HidRecord {
-                Time = time,
-                Size = (uint)ri->Hid.Size,
-                Count = (uint)ri->Hid.Count,
-                Data = ByteString.CopyFrom(data)
-            }.WriteTo(fs);
+            switch (ri->Header.Type) {
+                case RawInputType.Mouse:
+                    new MouseRecord {
+                        Time = time,
+                        Flags = (uint)ri->Mouse.Flags,
+                        ButtonFlags = (uint)ri->Mouse.Data.ButtonFlags,
+                        ButtonData = ri->Mouse.Data.ButtonData,
+                        Buttons = ri->Mouse.RawButtons,
+                        X = ri->Mouse.LastX,
+                        Y = ri->Mouse.LastY,
+                        Extra = ri->Mouse.ExtraInformation
+                    }.WriteTo(fs);
+                    break;
+                case RawInputType.Keyboard:
+                    // XXX: Do not implement yet.
+                    break;
+                case RawInputType.HID:
+                    // This means two copies. Seriously?
+                    // There's a private ByteString constructor that takes
+                    // an array, but nothing else.
+                    var data = new byte[ri->Hid.Size * ri->Hid.Count];
+                    Marshal.Copy(
+                            (IntPtr)ri->Hid.Data, data,
+                            0, data.Length
+                    );
+                    
+                    new HidRecord {
+                        Time = time,
+                        Size = (uint)ri->Hid.Size,
+                        Count = (uint)ri->Hid.Count,
+                        Data = ByteString.CopyFrom(data)
+                    }.WriteTo(fs);
+                    break;
+            }
         }
 
         protected int LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam)
