@@ -27,23 +27,24 @@ message HidDevice {
 
 message MouseRecord {
     int64 Time = 1;
-    uint32 Flags = 2;
-    uint32 ButtonFlags = 3;
-    uint32 ButtonData = 4;
-    uint32 Buttons = 5;
-    int32 X = 6;
-    int32 Y = 7;
-    uint32 Extra = 8;
+    optional uint32 Flags = 2;
+    // ButtonFlags and ButtonData are u16, could be unpacked by consumer.
+    optional uint32 ButtonFlags = 3;
+    optional uint32 ButtonData = 4;
+    optional uint32 Buttons = 5;
+    optional int32 X = 6;
+    optional int32 Y = 7;
+    optional uint32 Extra = 8;
 }
 
 message KeyboardRecord {
     int64 Time = 1;
     uint32 Code = 2;
-    uint32 Flags = 3;
-    uint32 Reserved = 4;
+    optional uint32 Flags = 3;
+    optional uint32 Reserved = 4;
     uint32 VKey = 5;
     uint32 Message = 6;
-    uint32 Extra = 7;
+    optional uint32 Extra = 7;
 }
 
 message HidRecord {
