@@ -19,11 +19,13 @@ namespace Recorder
 {
     public unsafe partial class MainForm : Form
     {
+        protected int sz;
         protected RawInput *ri;
         protected FileStream fs;
 
         public MainForm()
         {
+            sz = 8192;
             ri = (RawInput *)Marshal.AllocHGlobal(8192);
             fs = new FileStream(
                 "inputrec.dat",
@@ -79,7 +81,35 @@ namespace Recorder
 
         protected void ProcessInput(ref Message m)
         {
+            // N.B. this is supposed to be called twice. We
+            // preallocate a buffer that should not overflow.
+            var rc = GetRawInputData(
+                m.LParam,
+                RawInputCommand.Input,
+                (IntPtr)ri, ref sz,
+                Marshal.SizeOf(typeof(RawInputHeader))
+            );
+            // TODO: Record overflow in the log.
 
+            Console.WriteLine(rc + " " + ri->Header.Type);
+            if (ri->Header.Type != RawInputType.HID)
+                return;
+
+            // This means two copies. Seriously?
+            var data = new byte[ri->Hid.Size * ri->Hid.Count];
+            Marshal.Copy(
+                    (IntPtr)ri->Hid.Data, data,
+                    0, data.Length
+            );
+                    
+            FILETIME time;
+            GetSystemTimePreciseAsFileTime(out time);
+            new HidRecord {
+                Time = time,
+                Size = (uint)ri->Hid.Size,
+                Count = (uint)ri->Hid.Count,
+                Data = ByteString.CopyFrom(data)
+            }.WriteTo(fs);
         }
 
         protected int LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam)
@@ -95,7 +125,7 @@ namespace Recorder
         {
             switch ((WindowMessage)m.Msg) {
                 case WindowMessage.WM_INPUT:
-                    Console.WriteLine("WM_INPUT");
+                    ProcessInput(ref m);
                     break;
                 default:
                     base.WndProc(ref m);
