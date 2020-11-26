@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+option csharp_namespace = "Recorder";
+
+message TimeSynchronization {
+    uint64 time = 1;
+}
+
+message WarningRecord {
+    string text = 1;
+}
+
+message MouseDevice {
+    string Name = 1;
+    uint32 Handle = 2;
+}
+
+message KeyboardDevice {
+    string name = 1;
+    uint32 handle = 2;
+}
+
+message HidDevice {
+    string name = 1;
+    uint32 handle = 2;
+}
+
+message MouseRecord {
+    int64 Time = 1;
+    uint32 Flags = 2;
+    uint32 ButtonFlags = 3;
+    uint32 ButtonData = 4;
+    uint32 Buttons = 5;
+    int32 X = 6;
+    int32 Y = 7;
+    uint32 Extra = 8;
+}
+
+message KeyboardRecord {
+    int64 Time = 1;
+    uint32 Code = 2;
+    uint32 Flags = 3;
+    uint32 Reserved = 4;
+    uint32 VKey = 5;
+    uint32 Message = 6;
+    uint32 Extra = 7;
+}
+
+message HidRecord {
+    int64 Time = 1;
+    uint32 Size = 2;
+    uint32 Count = 3;
+    bytes Data = 4;
+}
