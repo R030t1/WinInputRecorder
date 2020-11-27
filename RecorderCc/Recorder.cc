@@ -8,6 +8,7 @@ WCHAR szWindowClass[] = L"Recorder";
 
 UINT cbSz = 8192 * 8;
 LPRAWINPUT ri;
+ofstream fs;
 
 int InitConsole()
 {
@@ -30,14 +31,19 @@ int
 InitRecorder(
     HWND hWnd
 ) {
-    if (InitConsole())
+    if (InitConsole()) {
         return 1;
-	// TODO: Probably not buggy, comment out to troubleshoot MinGW
-	// issue.
-    //SetWindowsHookExW(WH_MOUSE_LL, LowLevelMouseProc, NULL, 0);
+	}
+
+	fs.open("recinput.dat", ios_base::binary | ios_base::trunc);
+
+    SetWindowsHookExW(WH_MOUSE_LL, LowLevelMouseProc, NULL, 0);
 
 	// N.B. proper usage of the API requires a first call to determine size
-	// of data. We allocate a large buffer and skip that.
+	// of data. We allocate a large buffer and skip that. It appears Window's
+	// ability to buffer events is very limited despite the existence of API
+	// to do just that. HID reports can be up to 4k and they may arrive at
+	// 1000Hz.
 	ri = (LPRAWINPUT)malloc(cbSz);
     RAWINPUTDEVICE rids[] = {
         {
@@ -125,11 +131,9 @@ WndProc(
 	_In_ WPARAM	wParam,
 	_In_ LPARAM	lParam
 )
-{
-	UINT dwSize;
-	FILETIME ft;
-	
+{	
 	// Take the timestamp before any processing is done.
+	FILETIME ft;
 	GetSystemTimePreciseAsFileTime(&ft);
 	switch (message) {
 	case WM_CREATE: {
@@ -151,12 +155,11 @@ WndProc(
 			ri, &cbSz,
 			sizeof(RAWINPUTHEADER)
 		);
-		wprintf(L"%d %d\n", rc, GetLastError());
+		if (rc < 0) {
+			// TODO: Expand buffer, log error.
+		}
 
-		return RawInputProc(&ri, 1, sizeof(RAWINPUTHEADER));
-        //return RawInputProc(hWnd, message, lParam, wParam);
-		//return DefRawInputProc(&ri, 1, dwSize);
-        // Documentation implies the above call is pointless.
+		return RawInputProc(&ri, 1, sizeof(RAWINPUTHEADER), ft);
 	}
 	default: {
 		return DefWindowProcW(hWnd, message, wParam, lParam);
@@ -178,22 +181,88 @@ LowLevelMouseProc(
 LRESULT CALLBACK RawInputProc(
 	PRAWINPUT *paRawInput,
 	INT		  nInput,
-	UINT	  cbSizeHeader
+	UINT	  cbSizeHeader,
+	FILETIME  When
 ) {
 	PRAWINPUT ri = *paRawInput;
 	switch(ri->header.dwType) {
 		case RIM_TYPEMOUSE: {
+			// TODO: Shorten timestamp.
 			MouseRecord mc;
+			// Was 33, 42, on move or 25/27 on scroll.
+			//
+			// Optional fields and sint32 on X/Y make move records
+			// 12 or 14 bytes, most of which is timestamp.
+			//
+			// sint32 on ButtonData doesn't matter, it is signed
+			// but a short. If mouse is scrolled it takes up 2-3 bytes
+			// in all cases.
+			mc.set_time((uint64_t)When.dwHighDateTime << 32 |
+				(uint64_t)When.dwLowDateTime);
+			if (ri->data.mouse.usFlags)
+				mc.set_flags(ri->data.mouse.usFlags);
+			if (ri->data.mouse.usButtonFlags)
+				mc.set_buttonflags(ri->data.mouse.usButtonFlags);
+			if (ri->data.mouse.usButtonData)
+				mc.set_buttondata(ri->data.mouse.usButtonData);
+			if (ri->data.mouse.ulRawButtons)
+				mc.set_buttons(ri->data.mouse.ulRawButtons);
+			if (ri->data.mouse.lLastX)
+				mc.set_x(ri->data.mouse.lLastX);
+			if (ri->data.mouse.lLastY)
+				mc.set_y(ri->data.mouse.lLastY);
+			if (ri->data.mouse.ulExtraInformation)
+				mc.set_extra(ri->data.mouse.ulExtraInformation);
+			//printf("%s\n", mc.ShortDebugString().c_str());
+			printf("mouse: %lld %lld\n",
+				mc.ByteSizeLong(),
+				mc.SpaceUsedLong()
+			);
+			// TODO: Is this the best cast?
+			mc.SerializeToOstream(&fs);
 			break;
 		}
 		case RIM_TYPEKEYBOARD: {
 			KeyboardRecord kc;
+			kc.set_time((uint64_t)When.dwHighDateTime << 32 |
+				(uint64_t)When.dwLowDateTime);
+			kc.set_code(ri->data.keyboard.MakeCode);
+			if (ri->data.keyboard.Flags)
+				kc.set_flags(ri->data.keyboard.Flags);
+			if (ri->data.keyboard.Reserved)
+				kc.set_reserved(ri->data.keyboard.Reserved);
+			kc.set_vkey(ri->data.keyboard.VKey);
+			kc.set_message(ri->data.keyboard.Message);
+			if (ri->data.keyboard.ExtraInformation)
+				kc.set_extra(ri->data.keyboard.ExtraInformation);
+			kc.SerializeToOstream(&fs);
 			break;
 		}
 		case RIM_TYPEHID: {
+			// TODO: Find a way to compact these records. Maybe
+			// streaming compression? Could also avoid destructuring
+			// and restructuring mouse and keyboard events.
+			//
+			// Some device produce short descriptors comparable to
+			// a mouse or keyboard report, like gamepads. But others
+			// produce very large reports. E.g. author's touchscreen
+			// reports ~230 bytes at ~1000Hz.
 			HidRecord hc;
+			hc.set_time((uint64_t)When.dwHighDateTime << 32 |
+				(uint64_t)When.dwLowDateTime);
+			hc.set_size(ri->data.hid.dwSizeHid);
+			hc.set_count(ri->data.hid.dwCount);
+			hc.set_data(ri->data.hid.bRawData,
+				ri->data.hid.dwSizeHid * ri->data.hid.dwCount);
+			//printf("%s\n", hc.ShortDebugString().c_str());
+			printf("hid: %lld %lld\n",
+				hc.ByteSizeLong(),
+				hc.SpaceUsedLong()
+			);
+			hc.SerializeToOstream(&fs);
 			break;
 		}
 	}
-	return 0;
+	return DefRawInputProc(paRawInput, 1, cbSizeHeader);
+    // Documentation implies the above call is pointless.
 }

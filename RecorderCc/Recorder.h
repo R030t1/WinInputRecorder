@@ -9,8 +9,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include <string>
+#include <fstream>
 #include <iostream>
 
 #include "Recorder.pb.h"
@@ -42,7 +44,8 @@ LRESULT CALLBACK LowLevelMouseProc(
 LRESULT CALLBACK RawInputProc(
 	PRAWINPUT *paRawInput,
 	INT		  nInput,
-	UINT	  cbSizeHeader
+	UINT	  cbSizeHeader,
+	FILETIME  When
 );
 
 int SetupConsole();

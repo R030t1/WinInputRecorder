@@ -32,8 +32,8 @@ message MouseRecord {
     optional uint32 ButtonFlags = 3;
     optional uint32 ButtonData = 4;
     optional uint32 Buttons = 5;
-    optional int32 X = 6;
-    optional int32 Y = 7;
+    optional sint32 X = 6;
+    optional sint32 Y = 7;
     optional uint32 Extra = 8;
 }
 
