@@ -21,7 +21,7 @@ ${BIN}: Recorder.pb.o Recorder.cc Recorder.h
 
 release:
 	mkdir -p WinInputRecorder
-	cp `ldd Recorder.exe | awk 'BEGIN { IGNORECASE=1 } !/System32/ { print $$3; }'` ./WinInputRecorder
+	cp $(shell ldd Recorder.exe | awk -v IGNORECASE=1 '!/System32/ { print $$3; }') ./WinInputRecorder
 	cp Recorder.exe ./WinInputRecorder
 	zip WinInputRecorder -r ./WinInputRecorder 
 
