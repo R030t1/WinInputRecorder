@@ -10,6 +10,10 @@ nupkg/
 *.pb.h
 *.pb.cc
 
+# Compilation intermediates and results
+*.o
+*.exe
+
 # Visual Studio Code
 .vscode
 

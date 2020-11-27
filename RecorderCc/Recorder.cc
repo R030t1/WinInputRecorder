@@ -6,6 +6,9 @@ WCHAR szTitle[] = L"Recorder";
 WCHAR szMenuName[] = L"Recorder";
 WCHAR szWindowClass[] = L"Recorder";
 
+UINT cbSz = 8192 * 8;
+LPRAWINPUT ri;
+
 int InitConsole()
 {
     FILE *fConsole;
@@ -29,14 +32,21 @@ InitRecorder(
 ) {
     if (InitConsole())
         return 1;
-    SetWindowsHookExW(WH_MOUSE_LL, LowLevelMouseProc, NULL, 0);
+	// TODO: Probably not buggy, comment out to troubleshoot MinGW
+	// issue.
+    //SetWindowsHookExW(WH_MOUSE_LL, LowLevelMouseProc, NULL, 0);
 
-    // Note, keyboards need RIDEV_NOHOTKEYS.
+	// N.B. proper usage of the API requires a first call to determine size
+	// of data. We allocate a large buffer and skip that.
+	ri = (LPRAWINPUT)malloc(cbSz);
     RAWINPUTDEVICE rids[] = {
         {
             0x01, // .UsagePage = Generic
             0x02, // .Usage = Mouse
-            RIDEV_NOLEGACY | RIDEV_INPUTSINK, // .Flags
+			// Can set NOLEGACY but then GUI elements do not update.
+			// This seems to not happen with C#.
+			// It also seems to not matter if you don't need a GUI.
+            RIDEV_INPUTSINK, // .Flags,
             hWnd, // .WindowHandle
         },
         {
@@ -53,6 +63,7 @@ InitRecorder(
             hWnd,
         },
     };
+	// Keyboards need RIDEV_NOHOTKEYS.
 
     RegisterRawInputDevices(
         rids, sizeof(rids) / sizeof(rids[0]),
@@ -117,7 +128,6 @@ WndProc(
 {
 	UINT dwSize;
 	LPBYTE lpData;
-	LPRAWINPUT ri;
 	FILETIME ft;
 	
 	// Take the timestamp before any processing is done.
@@ -135,8 +145,17 @@ WndProc(
 		break;
 	}
 	case WM_INPUT: {
-        wprintf(L".\n");
-		return DefRawInputProc(&ri, 1, dwSize);
+		// TODO: Evaluate GetRawInputBuffer.
+		int rc = GetRawInputData(
+			(HRAWINPUT)lParam, RID_INPUT,
+			ri, &cbSz,
+			sizeof(RAWINPUTHEADER)
+		);
+		wprintf(L"%d %d\n", rc, GetLastError());
+
+		return RawInputProc(&ri, 1, sizeof(RAWINPUTHEADER));
+        //return RawInputProc(hWnd, message, lParam, wParam);
+		//return DefRawInputProc(&ri, 1, dwSize);
         // Documentation implies the above call is pointless.
 	}
 	default: {
@@ -154,4 +173,27 @@ LowLevelMouseProc(
     LPARAM lParam
 ) {
     return CallNextHookEx(NULL, nCode, wParam, lParam);
+}
+
+LRESULT CALLBACK RawInputProc(
+	PRAWINPUT *paRawInput,
+	INT		  nInput,
+	UINT	  cbSizeHeader
+) {
+	PRAWINPUT ri = *paRawInput;
+	switch(ri->header.dwType) {
+		case RIM_TYPEMOUSE: {
+			MouseRecord mc;
+			break;
+		}
+		case RIM_TYPEKEYBOARD: {
+			KeyboardRecord kc;
+			break;
+		}
+		case RIM_TYPEHID: {
+			HidRecord hc;
+			break;
+		}
+	}
+	return 0;
 }

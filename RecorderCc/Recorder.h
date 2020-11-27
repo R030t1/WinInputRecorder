@@ -13,6 +13,8 @@
 #include <string>
 #include <iostream>
 
+#include "Recorder.pb.h"
+
 int InitRecorder(
     HWND hWnd
 );
@@ -35,6 +37,12 @@ LRESULT CALLBACK LowLevelMouseProc(
     int nCode,
     WPARAM wParam,
     LPARAM lParam
+);
+
+LRESULT CALLBACK RawInputProc(
+	PRAWINPUT *paRawInput,
+	INT		  nInput,
+	UINT	  cbSizeHeader
 );
 
 int SetupConsole();
