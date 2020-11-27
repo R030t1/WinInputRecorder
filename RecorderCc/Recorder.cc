@@ -127,7 +127,6 @@ WndProc(
 )
 {
 	UINT dwSize;
-	LPBYTE lpData;
 	FILETIME ft;
 	
 	// Take the timestamp before any processing is done.
@@ -146,6 +145,7 @@ WndProc(
 	}
 	case WM_INPUT: {
 		// TODO: Evaluate GetRawInputBuffer.
+		// Previously had access issue. May have been byte alignment.
 		int rc = GetRawInputData(
 			(HRAWINPUT)lParam, RID_INPUT,
 			ri, &cbSz,

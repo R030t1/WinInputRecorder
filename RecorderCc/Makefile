@@ -1,6 +1,6 @@
 CXX=x86_64-w64-mingw32-g++
 CXF=-municode -mwindows -Wall -pedantic -std=gnu++2a \
-	-static-libgcc \
+	-static-libgcc -static-libstdc++ \
 	$(pkg-config --cflags --libs protobuf)
 BIN=Recorder.exe
 
