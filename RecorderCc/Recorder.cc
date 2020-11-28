@@ -37,7 +37,7 @@ InitRecorder(
         return 1;
 	}
 
-	fs.open("recinput.dat", ios_base::binary | ios_base::trunc);
+	fs.open("inputrec.dat", ios_base::binary | ios_base::trunc);
 	//zfs.push(gzip_compressor());
 	//zfs.push(fs);
 

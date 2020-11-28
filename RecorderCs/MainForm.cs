@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -22,6 +23,7 @@ namespace Recorder
         protected int sz;
         protected RawInput *ri;
         protected FileStream fs;
+        protected DeflateStream ds;
 
         public MainForm()
         {
@@ -31,6 +33,10 @@ namespace Recorder
                 "inputrec.dat",
                 System.IO.FileMode.Append,
                 System.IO.FileAccess.Write
+            );
+            ds = new DeflateStream(
+                fs,
+                CompressionLevel.Optimal
             );
 
             InitializeComponent();
@@ -114,7 +120,7 @@ namespace Recorder
                         X = ri->Mouse.LastX,
                         Y = ri->Mouse.LastY,
                         Extra = ri->Mouse.ExtraInformation
-                    }.WriteTo(fs);
+                    }.WriteTo(ds);
                     break;
                 case RawInputType.Keyboard:
                     // XXX: Do not implement yet.
@@ -134,7 +140,7 @@ namespace Recorder
                         Size = (uint)ri->Hid.Size,
                         Count = (uint)ri->Hid.Count,
                         Data = ByteString.CopyFrom(data)
-                    }.WriteTo(fs);
+                    }.WriteTo(ds);
                     break;
             }
         }
