@@ -9,7 +9,7 @@ WCHAR szWindowClass[] = L"Recorder";
 
 UINT cbSz = 8192 * 8;
 LPRAWINPUT ri;
-filtering_ostreambuf zfs;
+filtering_ostream zfs;
 ofstream fs;
 
 int InitConsole()
@@ -38,8 +38,8 @@ InitRecorder(
 	}
 
 	fs.open("inputrec.dat", ios_base::binary | ios_base::trunc);
-	//zfs.push(gzip_compressor());
-	//zfs.push(fs);
+	zfs.push(gzip_compressor());
+	zfs.push(fs);
 
     SetWindowsHookExW(WH_MOUSE_LL, LowLevelMouseProc, NULL, 0);
 
@@ -226,8 +226,7 @@ LRESULT CALLBACK RawInputProc(
 				mc.ByteSizeLong(),
 				mc.SpaceUsedLong()
 			);
-			mc.SerializeToOstream(&fs);
-			//mc.SerializeToOstream((ostream *)&zfs);
+			mc.SerializeToOstream(&zfs);
 			break;
 		}
 		case RIM_TYPEKEYBOARD: {
@@ -244,8 +243,7 @@ LRESULT CALLBACK RawInputProc(
 			kc.set_message(ri->data.keyboard.Message);
 			if (ri->data.keyboard.ExtraInformation)
 				kc.set_extra(ri->data.keyboard.ExtraInformation);
-			kc.SerializeToOstream(&fs);
-			//kc.SerializeToOstream((ostream *)&zfs);
+			kc.SerializeToOstream(&zfs);
 			break;
 		}
 		case RIM_TYPEHID: {
@@ -270,8 +268,7 @@ LRESULT CALLBACK RawInputProc(
 				hc.ByteSizeLong(),
 				hc.SpaceUsedLong()
 			);
-			hc.SerializeToOstream(&fs);
-			//hc.SerializeToOstream((ostream *)&zfs);
+			hc.SerializeToOstream(&zfs);
 			break;
 		}
 	}
