@@ -28,7 +28,7 @@ namespace Recorder
         public MainForm()
         {
             AppDomain.CurrentDomain.ProcessExit += Exited;
-            
+
             sz = 8192;
             ri = (RawInput *)Marshal.AllocHGlobal(8192);
             fs = new FileStream(
@@ -79,9 +79,14 @@ namespace Recorder
             );
         }
 
+        ~MainForm()
+        {
+            gs.Close();
+            new FileStream("didexit.dat", FileMode.Create);
+        }
+
         public void Exited(object sender, EventArgs e)
         {
-            new FileStream("didexit.dat", FileMode.Create).Close();
             gs.Close();
         }
 

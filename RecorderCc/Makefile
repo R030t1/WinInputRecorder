@@ -2,8 +2,8 @@ CXX= x86_64-w64-mingw32-g++
 CXF= -municode -mwindows -Wall -pedantic -std=gnu++2a \
 	-static-libgcc -static-libstdc++ \
 	$(shell pkg-config --cflags protobuf)
-CXL= $(shell pkg-config --libs protobuf)
-	#-lboost_system-mt -lboost_filesystem-mt -lboost_iostreams-mt
+CXL= $(shell pkg-config --libs protobuf) \
+	-lboost_system-mt -lboost_filesystem-mt -lboost_iostreams-mt
 BIN=Recorder.exe
 
 .phony: default clean

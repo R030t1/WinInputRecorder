@@ -9,7 +9,7 @@ WCHAR szWindowClass[] = L"Recorder";
 
 UINT cbSz = 8192 * 8;
 LPRAWINPUT ri;
-//filtering_ostreambuf zfs;
+filtering_ostreambuf zfs;
 ofstream fs;
 
 int InitConsole()
