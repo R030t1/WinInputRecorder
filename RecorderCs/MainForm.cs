@@ -23,21 +23,20 @@ namespace Recorder
         protected int sz;
         protected RawInput *ri;
         protected FileStream fs;
-        protected DeflateStream ds;
+        protected GZipStream gs;
 
         public MainForm()
         {
+            AppDomain.CurrentDomain.ProcessExit += Exited;
+            
             sz = 8192;
             ri = (RawInput *)Marshal.AllocHGlobal(8192);
             fs = new FileStream(
-                "inputrec.dat",
+                "inputrec.dat.gz",
                 System.IO.FileMode.Append,
                 System.IO.FileAccess.Write
             );
-            ds = new DeflateStream(
-                fs,
-                CompressionLevel.Optimal
-            );
+            gs = new GZipStream(fs, CompressionLevel.Optimal);
 
             InitializeComponent();
             AllocConsole();
@@ -80,6 +79,12 @@ namespace Recorder
             );
         }
 
+        public void Exited(object sender, EventArgs e)
+        {
+            new FileStream("didexit.dat", FileMode.Create).Close();
+            gs.Close();
+        }
+
         protected List<byte> EnumerateInput()
         {
             return null;
@@ -120,7 +125,7 @@ namespace Recorder
                         X = ri->Mouse.LastX,
                         Y = ri->Mouse.LastY,
                         Extra = ri->Mouse.ExtraInformation
-                    }.WriteTo(ds);
+                    }.WriteTo(gs);
                     break;
                 case RawInputType.Keyboard:
                     // XXX: Do not implement yet.
@@ -140,7 +145,7 @@ namespace Recorder
                         Size = (uint)ri->Hid.Size,
                         Count = (uint)ri->Hid.Count,
                         Data = ByteString.CopyFrom(data)
-                    }.WriteTo(ds);
+                    }.WriteTo(gs);
                     break;
             }
         }
@@ -157,6 +162,11 @@ namespace Recorder
         protected unsafe override void WndProc(ref Message m)
         {
             switch ((WindowMessage)m.Msg) {
+                case WindowMessage.WM_CLOSE:
+                case WindowMessage.WM_DESTROY:
+                case WindowMessage.WM_ENDSESSION:
+                    gs.Close();
+                    break;
                 case WindowMessage.WM_INPUT:
                     ProcessInput(ref m);
                     break;
