@@ -12,43 +12,47 @@ message WarningRecord {
 
 message MouseDevice {
     string Name = 1;
-    uint32 Handle = 2;
+    uint64 Handle = 2;
 }
 
 message KeyboardDevice {
     string name = 1;
-    uint32 handle = 2;
+    uint64 handle = 2;
 }
 
 message HidDevice {
     string name = 1;
-    uint32 handle = 2;
+    uint64 handle = 2;
 }
 
 message MouseRecord {
     int64 Time = 1;
-    uint32 Flags = 2;
-    uint32 ButtonFlags = 3;
-    uint32 ButtonData = 4;
-    uint32 Buttons = 5;
-    int32 X = 6;
-    int32 Y = 7;
-    uint32 Extra = 8;
+    int64 Handle = 2;
+    uint32 Flags = 3;
+    // ButtonFlags and ButtonData are u16, could be unpacked by consumer.
+    uint32 ButtonFlags = 4;
+    uint32 ButtonData = 5;
+    uint32 Buttons = 6;
+    sint32 X = 7;
+    sint32 Y = 8;
+    uint32 Extra = 9;
 }
 
 message KeyboardRecord {
     int64 Time = 1;
-    uint32 Code = 2;
-    uint32 Flags = 3;
-    uint32 Reserved = 4;
-    uint32 VKey = 5;
-    uint32 Message = 6;
-    uint32 Extra = 7;
+    int64 Handle = 2;
+    uint32 Code = 3;
+    uint32 Flags = 4;
+    uint32 Reserved = 5;
+    uint32 VKey = 6;
+    uint32 Message = 7;
+    uint32 Extra = 8;
 }
 
 message HidRecord {
     int64 Time = 1;
-    uint32 Size = 2;
-    uint32 Count = 3;
-    bytes Data = 4;
+    int64 Handle = 2;
+    uint32 Size = 3;
+    uint32 Count = 4;
+    bytes Data = 5;
 }

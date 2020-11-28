@@ -1,5 +1,6 @@
 #include "Recorder.h"
 using namespace std;
+using namespace boost::iostreams;
 
 HINSTANCE hInst;
 WCHAR szTitle[] = L"Recorder";
@@ -8,6 +9,7 @@ WCHAR szWindowClass[] = L"Recorder";
 
 UINT cbSz = 8192 * 8;
 LPRAWINPUT ri;
+//filtering_ostreambuf zfs;
 ofstream fs;
 
 int InitConsole()
@@ -36,6 +38,8 @@ InitRecorder(
 	}
 
 	fs.open("recinput.dat", ios_base::binary | ios_base::trunc);
+	//zfs.push(gzip_compressor());
+	//zfs.push(fs);
 
     SetWindowsHookExW(WH_MOUSE_LL, LowLevelMouseProc, NULL, 0);
 
@@ -194,11 +198,15 @@ LRESULT CALLBACK RawInputProc(
 			// Optional fields and sint32 on X/Y make move records
 			// 12 or 14 bytes, most of which is timestamp.
 			//
+			// No change when handle added?
+			//
 			// sint32 on ButtonData doesn't matter, it is signed
-			// but a short. If mouse is scrolled it takes up 2-3 bytes
-			// in all cases.
+			// but a short. If mouse is scrolled it takes up 2-4 bytes
+			// in all cases with negative motion being 2 bytes larger.
+			// Could zero pad to the left?
 			mc.set_time((uint64_t)When.dwHighDateTime << 32 |
 				(uint64_t)When.dwLowDateTime);
+			mc.set_handle((uint64_t)ri->header.hDevice);
 			if (ri->data.mouse.usFlags)
 				mc.set_flags(ri->data.mouse.usFlags);
 			if (ri->data.mouse.usButtonFlags)
@@ -218,14 +226,15 @@ LRESULT CALLBACK RawInputProc(
 				mc.ByteSizeLong(),
 				mc.SpaceUsedLong()
 			);
-			// TODO: Is this the best cast?
 			mc.SerializeToOstream(&fs);
+			//mc.SerializeToOstream((ostream *)&zfs);
 			break;
 		}
 		case RIM_TYPEKEYBOARD: {
 			KeyboardRecord kc;
 			kc.set_time((uint64_t)When.dwHighDateTime << 32 |
 				(uint64_t)When.dwLowDateTime);
+			kc.set_handle((uint64_t)ri->header.hDevice);
 			kc.set_code(ri->data.keyboard.MakeCode);
 			if (ri->data.keyboard.Flags)
 				kc.set_flags(ri->data.keyboard.Flags);
@@ -236,6 +245,7 @@ LRESULT CALLBACK RawInputProc(
 			if (ri->data.keyboard.ExtraInformation)
 				kc.set_extra(ri->data.keyboard.ExtraInformation);
 			kc.SerializeToOstream(&fs);
+			//kc.SerializeToOstream((ostream *)&zfs);
 			break;
 		}
 		case RIM_TYPEHID: {
@@ -250,6 +260,7 @@ LRESULT CALLBACK RawInputProc(
 			HidRecord hc;
 			hc.set_time((uint64_t)When.dwHighDateTime << 32 |
 				(uint64_t)When.dwLowDateTime);
+			hc.set_handle((uint64_t)ri->header.hDevice);
 			hc.set_size(ri->data.hid.dwSizeHid);
 			hc.set_count(ri->data.hid.dwCount);
 			hc.set_data(ri->data.hid.bRawData,
@@ -260,6 +271,7 @@ LRESULT CALLBACK RawInputProc(
 				hc.SpaceUsedLong()
 			);
 			hc.SerializeToOstream(&fs);
+			//hc.SerializeToOstream((ostream *)&zfs);
 			break;
 		}
 	}

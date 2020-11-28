@@ -1,12 +1,14 @@
-CXX=x86_64-w64-mingw32-g++
-CXF=-municode -mwindows -Wall -pedantic -std=gnu++2a \
+CXX= x86_64-w64-mingw32-g++
+CXF= -municode -mwindows -Wall -pedantic -std=gnu++2a \
 	-static-libgcc -static-libstdc++ \
-	$(pkg-config --cflags --libs protobuf)
+	$(shell pkg-config --cflags protobuf)
+CXL= $(shell pkg-config --libs protobuf)
+	#-lboost_system-mt -lboost_filesystem-mt -lboost_iostreams-mt
 BIN=Recorder.exe
 
 .phony: default clean
 
-default: ${BIN}
+default: $(BIN)
 
 Recorder.pb.cc: Recorder.proto
 	protoc --experimental_allow_proto3_optional \
@@ -14,10 +16,10 @@ Recorder.pb.cc: Recorder.proto
 		$^
 
 Recorder.pb.o: Recorder.pb.cc Recorder.pb.h
-	${CXX} ${CXF} Recorder.pb.cc -c -o $@
+	${CXX} $(CXF) Recorder.pb.cc -c -o $@
 
 ${BIN}: Recorder.pb.o Recorder.cc Recorder.h
-	${CXX} ${CXF} Recorder.pb.cc Recorder.cc -o $@ -lprotobuf
+	${CXX} $(CXF) Recorder.pb.cc Recorder.cc -o $@ ${CXL}
 
 release:
 	mkdir -p WinInputRecorder

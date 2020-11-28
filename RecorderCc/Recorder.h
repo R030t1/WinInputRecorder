@@ -15,6 +15,9 @@
 #include <fstream>
 #include <iostream>
 
+#include <boost/iostreams/filtering_streambuf.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
+
 #include "Recorder.pb.h"
 
 int InitRecorder(
