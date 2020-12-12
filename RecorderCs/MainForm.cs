@@ -52,6 +52,8 @@ namespace Recorder
             );
 
             var regs = new RawInputDevice[] {
+                // TODO: Not getting scroll events on other windows?
+                // Not getting *trackpad* scroll events.
                 new RawInputDevice {
                     UsagePage = HIDUsagePage.Generic,
                     Usage = HIDUsage.Mouse,

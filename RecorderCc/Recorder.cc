@@ -1,6 +1,9 @@
 #include "Recorder.h"
 using namespace std;
 using namespace boost::iostreams;
+using namespace google::protobuf::util;
+
+#define RECORDER_ICONNOTIFY	(WM_APP + 1)
 
 HINSTANCE hInst;
 WCHAR szTitle[] = L"Recorder";
@@ -19,6 +22,10 @@ int InitConsole()
 	if (!AllocConsole()) {
 		return 1;
 	}
+
+	HWND con = GetConsoleWindow();
+	HMENU conmenu = GetSystemMenu(con, FALSE);
+	EnableMenuItem(conmenu, SC_CLOSE, MF_DISABLED);
 	
 	freopen_s(&fConsole, "CONOUT$", "w", stdout);
 	freopen_s(&fConsole, "CONIN$", "r", stdin);
@@ -29,6 +36,27 @@ int InitConsole()
     return 0;
 }
 
+int InitTray(
+	HWND hWnd
+) {
+	NOTIFYICONDATAW nid = {
+		.cbSize = sizeof(NOTIFYICONDATA),
+		.hWnd = hWnd,
+		.uID = 0,
+		.uFlags = NIF_MESSAGE | NIF_TIP,
+		.uCallbackMessage = RECORDER_ICONNOTIFY,
+		.hIcon = 0,
+		.dwState = 0,
+		.dwInfoFlags = 0,
+		.hBalloonIcon = 0
+	};
+	wcsncpy_s(nid.szTip, L"Recorder", 20);
+	wcsncpy_s(nid.szInfo, L"Recorder", 20);
+	wcsncpy_s(nid.szInfoTitle, L"Recorder", 20);
+	Shell_NotifyIconW(NIM_ADD, &nid);
+	return 0;
+}
+
 int
 InitRecorder(
     HWND hWnd
@@ -37,11 +65,16 @@ InitRecorder(
         return 1;
 	}
 
-	fs.open("inputrec.dat", ios_base::binary | ios_base::trunc);
+	fs.open("inputrec.dat.gz", ios_base::binary | ios_base::trunc);
 	zfs.push(gzip_compressor());
 	zfs.push(fs);
 
     SetWindowsHookExW(WH_MOUSE_LL, LowLevelMouseProc, NULL, 0);
+
+	// TODO: Not receiving mouse events on scroll.
+	// Fixed this in C#, what gives?
+	// Found it: We're not getting *trackpad* scroll events for
+	// some reason.
 
 	// N.B. proper usage of the API requires a first call to determine size
 	// of data. We allocate a large buffer and skip that. It appears Window's
@@ -119,6 +152,8 @@ wWinMain(
 	if (!hWnd) {
 		// TODO: Error handling.
 	}
+
+	ShowWindow(hWnd, SW_SHOW);
 	
 	while (GetMessageW(&msg, NULL, 0, 0)) {
 		TranslateMessage(&msg);
@@ -145,9 +180,18 @@ WndProc(
             // TODO: Error handling.
             PostQuitMessage(0);
         }
+		if (InitTray(hWnd)) {
+			// TODO: Ditto.
+			PostQuitMessage(0);
+		}
+		break;
+	}
+	case WM_ENDSESSION: {
+		zfs.reset();
 		break;
 	}
 	case WM_DESTROY: {
+		zfs.reset();
 		PostQuitMessage(0);
 		break;
 	}
@@ -165,11 +209,30 @@ WndProc(
 
 		return RawInputProc(&ri, 1, sizeof(RAWINPUTHEADER), ft);
 	}
+	case RECORDER_ICONNOTIFY: {
+		return NotifyIconProc(hWnd, message, wParam, lParam);
+	}
 	default: {
 		return DefWindowProcW(hWnd, message, wParam, lParam);
 	}
 	}
 	
+	return 0;
+}
+
+LRESULT CALLBACK
+NotifyIconProc(
+	_In_ HWND	hWnd,
+	_In_ UINT	message,
+	_In_ WPARAM	wParam,
+	_In_ LPARAM	lParam
+) {
+	switch (message) {
+	case WM_LBUTTONUP: {
+		// Not getting clicks, TODO.
+		return 0;
+	}
+	}
 	return 0;
 }
 
@@ -226,7 +289,7 @@ LRESULT CALLBACK RawInputProc(
 				mc.ByteSizeLong(),
 				mc.SpaceUsedLong()
 			);
-			mc.SerializeToOstream(&zfs);
+			SerializeDelimitedToOstream(mc, &zfs);
 			break;
 		}
 		case RIM_TYPEKEYBOARD: {
@@ -243,7 +306,7 @@ LRESULT CALLBACK RawInputProc(
 			kc.set_message(ri->data.keyboard.Message);
 			if (ri->data.keyboard.ExtraInformation)
 				kc.set_extra(ri->data.keyboard.ExtraInformation);
-			kc.SerializeToOstream(&zfs);
+			SerializeDelimitedToOstream(kc, &zfs);
 			break;
 		}
 		case RIM_TYPEHID: {
@@ -268,7 +331,7 @@ LRESULT CALLBACK RawInputProc(
 				hc.ByteSizeLong(),
 				hc.SpaceUsedLong()
 			);
-			hc.SerializeToOstream(&zfs);
+			SerializeDelimitedToOstream(hc, &zfs);
 			break;
 		}
 	}

@@ -18,6 +18,7 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 
+#include <google/protobuf/util/delimited_message_util.h>
 #include "Recorder.pb.h"
 
 int InitRecorder(
@@ -32,6 +33,13 @@ int APIENTRY wWinMain(
 );
 
 LRESULT CALLBACK WndProc(
+	_In_ HWND	hWnd,
+	_In_ UINT	message,
+	_In_ WPARAM	wParam,
+	_In_ LPARAM	lParam
+);
+
+LRESULT CALLBACK NotifyIconProc(
 	_In_ HWND	hWnd,
 	_In_ UINT	message,
 	_In_ WPARAM	wParam,
